@@ -82,6 +82,40 @@ class SimulatedAPITest(unittest.TestCase):
             {"error": "Question must be a non-empty string"},
         )
 
+    def test_missing_question_is_invalid(self):
+        status, payload = self.post_json({})
+        self.assertEqual(status, 400)
+        self.assertEqual(
+            payload,
+            {"error": "Question must be a non-empty string"},
+        )
+
+    def test_non_string_question_is_invalid(self):
+        status, payload = self.post_json({"question": 42})
+        self.assertEqual(status, 400)
+        self.assertEqual(
+            payload,
+            {"error": "Question must be a non-empty string"},
+        )
+
+    def test_negative_content_length_is_rejected(self):
+        status, payload = self.request(
+            "POST",
+            "/ask",
+            headers={"Content-Length": "-1"},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload, {"error": "Invalid Content-Length"})
+
+    def test_oversized_content_length_is_rejected(self):
+        status, payload = self.request(
+            "POST",
+            "/ask",
+            headers={"Content-Length": "1048577"},
+        )
+        self.assertEqual(status, 413)
+        self.assertEqual(payload, {"error": "Request body too large"})
+
     def test_unknown_question_uses_safe_fallback(self):
         status, payload = self.post_json({"question": "Where is Mars?"})
         self.assertEqual(status, 200)

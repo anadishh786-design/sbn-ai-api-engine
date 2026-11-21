@@ -2,7 +2,7 @@
 
 Student: Ann
 
-This folder contains a local simulated API for Module 01, Part 2, Stage 1. It uses only the Python standard library. The server has no AI model behind it: it returns fixed answers or a clear simulated fallback.
+This repository contains a local simulated API for Module 01, Part 2, Stage 1. It uses only the Python standard library. The server has no AI model behind it: it returns fixed answers or a clear simulated fallback.
 
 ## API endpoints
 
@@ -12,13 +12,16 @@ This folder contains a local simulated API for Module 01, Part 2, Stage 1. It us
 | POST | `/ask` | `200 {"answer":"...","source":"mock"}` |
 
 The `/ask` body must be a JSON object containing a non-empty string named `question`.
+Request bodies are limited to 1 MiB (1,048,576 bytes). This is generous for a
+short question and its JSON metadata while bounding memory use for concurrent
+requests; larger requests are rejected with HTTP 413 before the body is read.
 
 ## Run
 
-From the repository root:
+From this repository root:
 
 ```powershell
-python sbn-ai-api-engine/simulated_api.py
+python simulated_api.py
 ```
 
 The server listens at `http://127.0.0.1:8000`.
@@ -30,9 +33,9 @@ Open a second terminal and run:
 ```powershell
 curl.exe http://127.0.0.1:8000/health
 
-curl.exe -X POST http://127.0.0.1:8000/ask `
-  -H "Content-Type: application/json" `
-  -d '{"question":"What is Python?"}'
+$body = @{ question = "What is Python?" } | ConvertTo-Json -Compress
+Invoke-RestMethod -Uri http://127.0.0.1:8000/ask `
+  -Method Post -ContentType "application/json" -Body $body
 
 curl.exe -X POST http://127.0.0.1:8000/ask `
   -H "Content-Type: application/json" `
@@ -45,10 +48,10 @@ PowerShell uses backticks for line continuation. `curl.exe --data-raw '{not vali
 
 ## Run tests
 
-From the repository root:
+From this repository root:
 
 ```powershell
-python -m unittest discover -s sbn-ai-api-engine/tests -v
+python -m unittest discover -s tests -v
 ```
 
 ## Concepts

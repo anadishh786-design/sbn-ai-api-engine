@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 HOST = "127.0.0.1"
 PORT = 8000
+MAX_REQUEST_BODY_BYTES = 1_048_576
 
 ANSWERS = {
     "what is python?": "Python is a programming language.",
@@ -44,9 +45,21 @@ class SimulatedAIHandler(BaseHTTPRequestHandler):
 
         try:
             length = int(content_length)
+        except ValueError:
+            self.send_json(400, {"error": "Invalid Content-Length"})
+            return
+
+        if length < 0:
+            self.send_json(400, {"error": "Invalid Content-Length"})
+            return
+        if length > MAX_REQUEST_BODY_BYTES:
+            self.send_json(413, {"error": "Request body too large"})
+            return
+
+        try:
             body = self.rfile.read(length)
             request_data = json.loads(body.decode("utf-8"))
-        except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        except (UnicodeDecodeError, json.JSONDecodeError):
             self.send_json(400, {"error": "Malformed JSON"})
             return
 
