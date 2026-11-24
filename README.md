@@ -1,8 +1,113 @@
-# SBN AI API Communication Engine - Stage 1
+# SBN AI API Communication Engine - Stage 1 and Stage 2
 
 Student: Ann
 
-This repository contains a local simulated API for Module 01, Part 2, Stage 1. It uses only the Python standard library. The server has no AI model behind it: it returns fixed answers or a clear simulated fallback.
+This repository contains Ann's local simulated API and a reusable HTTPX client.
+The server has no AI model behind it: it returns fixed answers or a clear
+simulated fallback. Stage 2 consumes that API without inventing answers or
+embedding HTTP logic in the terminal interface.
+
+Stage 1 base commit: `de1a669 Harden Stage 1 API and request validation`
+
+## Stage 2 setup
+
+Use Python 3.11 or newer. From the repository root:
+
+```powershell
+py -3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Copy `.env.example` to `.env` if desired. `.env` is not loaded automatically;
+set environment variables in PowerShell with:
+
+```powershell
+$env:API_BASE_URL="http://127.0.0.1:8000"
+$env:API_TIMEOUT_SECONDS="5"
+```
+
+The default base URL is exactly `http://127.0.0.1:8000`. The timeout defaults
+to 5 seconds and must be a positive number. No credentials are required.
+
+## Start the local server
+
+In one terminal:
+
+```powershell
+python simulated_api.py
+```
+
+Then, in another terminal:
+
+```powershell
+python main.py
+```
+
+The terminal supports `health`, `ask`, and `exit`. A question is 1-500
+characters after outer whitespace is removed. The answer is display-only data
+and is never interpreted as a command.
+
+## Run tests
+
+Run the complete suite:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+The suite retains all ten Stage 1 tests, adds HTTPX MockTransport contract
+tests, and starts the real local server on an ephemeral port for integration
+tests. Parameterized subtests cover repeated status and malformed-response
+cases; each subtest is one independent assertion set.
+
+## Test categories
+
+- Local Stage 1 server tests
+- Input and configuration tests
+- Request method, URL, JSON body, and sequential request tests
+- HTTP 400/413/401/403/404/429/500/503 tests
+- Connect and timeout failures
+- Invalid JSON and response-schema failures
+- Secret/prompt/answer logging safety
+- Real local health, known answer, fallback, and 400 integration checks
+
+## Project structure
+
+| File | Responsibility |
+|---|---|
+| `simulated_api.py` | Approved Stage 1 server |
+| `validation.py` | Question validation |
+| `config.py` | Environment configuration |
+| `api_client.py` | HTTPX transport, status parsing, schema validation |
+| `main.py` | Terminal interface |
+| `tests/test_simulated_api.py` | Stage 1 regression suite |
+| `tests/test_api_client.py` | MockTransport contract suite |
+| `tests/test_client_integration.py` | Ephemeral-port local integration suite |
+| `docs/stage2_decisions.md` | Architecture and design decisions |
+| `docs/stage2_ai_engineering_note.md` | AI interface and safety research |
+
+## Failure handling
+
+The client returns separate success and failure dataclasses. HTTP 200 is not
+enough: JSON must have the expected object shape and non-blank answer/source
+fields. `POST /ask` has no automatic retry because a timed-out or retried paid
+request can complete or duplicate remotely. The only retry metadata is advisory
+`Retry-After`; Stage 2 never sleeps for it.
+
+Result metadata includes elapsed monotonic duration and a local request ID.
+Logs may include operation, category, duration, and request ID. Questions,
+answer text, tokens, credentials, and response bodies are not logged.
+
+## Known limitations
+
+- No live AI provider or authentication is implemented.
+- There is no automatic retry for `/ask`.
+- HTTPX exception subclasses are distinguished between timeout and network
+  errors, but DNS and connection failures share `NETWORK_ERROR`.
+- `Retry-After` HTTP-date values are treated as advisory metadata and not
+  converted to sleep behavior.
 
 ## API endpoints
 
